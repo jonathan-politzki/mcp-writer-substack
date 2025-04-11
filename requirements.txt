@@ -1,0 +1,6 @@
+mcp[cli]>=0.5.0
+httpx>=0.23.0
+beautifulsoup4>=4.10.0
+feedparser>=6.0.10
+sentence-transformers>=2.2.2
+diskcache>=5.4.0

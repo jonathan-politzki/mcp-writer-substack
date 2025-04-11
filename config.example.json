@@ -1,0 +1,17 @@
+{
+  "platforms": [
+    {
+      "type": "substack",
+      "url": "https://yourusername.substack.com",
+      "name": "My Substack Blog"
+    },
+    {
+      "type": "medium",
+      "url": "https://medium.com/@yourusername",
+      "name": "My Medium Blog"
+    }
+  ],
+  "max_posts": 10,
+  "cache_duration_minutes": 60,
+  "similar_posts_count": 10
+} 

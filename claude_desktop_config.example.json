@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "writer-tool": {
+      "command": "/absolute/path/to/uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/writer-context-tool",
+        "run",
+        "writer_tool.py"
+      ]
+    }
+  }
+} 
