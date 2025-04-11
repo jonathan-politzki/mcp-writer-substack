@@ -144,12 +144,18 @@ async def fetch_substack_posts(url: str, max_posts: int, platform_name: str) -> 
             pub_date = None
             if hasattr(entry, 'published'):
                 try:
-                    pub_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %z")
-                except ValueError:
+                    # Try parsing in RFC 2822 format which includes timezone (standard for RSS feeds)
+                    from email.utils import parsedate_to_datetime
+                    pub_date = parsedate_to_datetime(entry.published)
+                except (ValueError, TypeError) as e:
+                    # Fall back to other formats if the RFC 2822 parser fails
                     try:
-                        pub_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S")
+                        pub_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %Z")
                     except ValueError:
-                        logger.warning(f"Could not parse date: {entry.published}")
+                        try:
+                            pub_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S")
+                        except ValueError:
+                            logger.warning(f"Could not parse date: {entry.published}")
             
             post = Post(
                 title=entry.title,
@@ -195,9 +201,15 @@ async def fetch_medium_posts(url: str, max_posts: int, platform_name: str) -> Li
             pub_date = None
             if hasattr(entry, 'published'):
                 try:
-                    pub_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %z")
-                except ValueError:
-                    logger.warning(f"Could not parse date: {entry.published}")
+                    # Try parsing in RFC 2822 format which includes timezone (standard for RSS feeds)
+                    from email.utils import parsedate_to_datetime
+                    pub_date = parsedate_to_datetime(entry.published)
+                except (ValueError, TypeError):
+                    # Fall back to other formats if the RFC 2822 parser fails
+                    try:
+                        pub_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %Z")
+                    except ValueError:
+                        logger.warning(f"Could not parse date: {entry.published}")
             
             post = Post(
                 title=entry.title,
@@ -527,10 +539,15 @@ if __name__ == "__main__":
         
         for post in all_posts:
             post_uri = f"mcp://writer-tool/essay/{post.id}"
+            # Format date properly for description
+            date_str = post.date.strftime("%b %d, %Y") if post.date else "Unknown date"
+            # Create a clean description without showing the raw URI
+            description = f"{post.platform_name} - {date_str}"
+            
             resources.append({
                 "uri": post_uri,
                 "name": post.title,
-                "description": f"{post.platform_name} - {post.date.strftime('%b %d, %Y') if post.date else 'Unknown date'}",
+                "description": description,
                 "mime_type": "text/markdown"
             })
         
@@ -568,9 +585,9 @@ if __name__ == "__main__":
         markdown = "# Your Essays\n\n"
         
         for post in all_posts:
-            post_uri = f"mcp://writer-tool/essay/{post.id}"
             date_str = post.date.strftime("%b %d, %Y") if post.date else "Unknown date"
-            markdown += f"- [{post.title}]({post_uri}) - {date_str} - {post.platform_name}\n"
+            # Use the title as the clickable link text without showing the URI
+            markdown += f"- [{post.title}](mcp://writer-tool/essay/{post.id}) - {date_str} - {post.platform_name}\n"
         
         return markdown
     
