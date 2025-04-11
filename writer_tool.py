@@ -389,49 +389,6 @@ def get_all_posts() -> List[Post]:
     return all_posts
 
 
-# Expose individual essays as resources
-@mcp.resource(r"mcp://writer-tool/essays")
-async def essays() -> list:
-    """Provide individual essays as resources."""
-    all_posts = get_all_posts()
-    resources = []
-    
-    for post in all_posts:
-        post_uri = f"mcp://writer-tool/essay/{post.id}"
-        resources.append({
-            "uri": post_uri,
-            "name": post.title,
-            "description": f"{post.platform_name} - {post.date.strftime('%b %d, %Y') if post.date else 'Unknown date'}",
-            "mime_type": "text/markdown"
-        })
-    
-    return resources
-
-
-@mcp.resource(r"mcp://writer-tool/essay/{post_id}")
-async def essay(post_id: str) -> str:
-    """Return a specific essay."""
-    post_data = posts_cache.get(f"post:{post_id}")
-    
-    if not post_data:
-        return f"Essay with ID {post_id} not found."
-    
-    post = Post.from_dict(post_data)
-    
-    # Format as markdown
-    markdown = f"# {post.title}\n\n"
-    
-    if post.date:
-        markdown += f"Date: {post.date.strftime('%b %d, %Y')}\n\n"
-    
-    markdown += f"Source: [{post.platform_name}]({post.url})\n\n"
-    markdown += f"Word count: {post.word_count}\n\n"
-    markdown += "---\n\n"
-    markdown += post.content
-    
-    return markdown
-
-
 @mcp.tool()
 async def refresh_content() -> str:
     """
@@ -560,6 +517,48 @@ async def preload_all_content():
 if __name__ == "__main__":
     # Preload all content before starting server
     asyncio.run(preload_all_content())
+    
+    # Explicitly register individual essays as resources
+    all_posts = get_all_posts()
+    
+    # First unregister the essays resource if it exists
+    if hasattr(mcp, '_resources') and r"mcp://writer-tool/essays" in mcp._resources:
+        del mcp._resources[r"mcp://writer-tool/essays"]
+    
+    # Register each essay as an individual resource
+    for post in all_posts:
+        # Create a unique URI for this essay
+        post_uri = f"mcp://writer-tool/essay/{post.id}"
+        
+        # Define a closure to capture the current post
+        async def get_essay_content(p=post):
+            # Format as markdown with a descriptive header
+            markdown = f"# {p.title}\n\n"
+            if p.date:
+                markdown += f"Date: {p.date.strftime('%b %d, %Y')}\n\n"
+            markdown += f"Source: [{p.platform_name}]({p.url})\n\n"
+            markdown += f"Word count: {p.word_count}\n\n"
+            markdown += "---\n\n"
+            markdown += p.content
+            return markdown
+        
+        # Register this essay as a direct resource
+        # Use the standard decorator pattern which is more likely to be compatible
+        mcp.resource(post_uri)(get_essay_content)
+    
+    # Also register a traditional resource for the essays list
+    @mcp.resource(r"mcp://writer-tool/essays-index")
+    async def essays_index() -> str:
+        """Return a markdown index of all essays."""
+        all_posts = get_all_posts()
+        markdown = "# Your Essays\n\n"
+        
+        for post in all_posts:
+            post_uri = f"mcp://writer-tool/essay/{post.id}"
+            date_str = post.date.strftime("%b %d, %Y") if post.date else "Unknown date"
+            markdown += f"- [{post.title}]({post_uri}) - {date_str} - {post.platform_name}\n"
+        
+        return markdown
     
     # Run the server
     mcp.run(transport="stdio") 
