@@ -1,5 +1,7 @@
 # Writer Context Tool for Claude
 
+![image](https://github.com/user-attachments/assets/e9a90109-5cbe-454d-b9f9-43f61a2544e5)
+
 Open-Sourced Model Context Protocol (MCP) implementation that connects Claude to your Substack and Medium writing.
 
 ## What is this?
